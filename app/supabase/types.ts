@@ -7,9 +7,11 @@ export type Database = {
 				Row: {
 					author: string;
 					description: string;
-					epub_path: string | null;
+					description_embeddings: string | null;
+					epub_file_name: string;
 					genres: string[];
 					id: number;
+					image_file_name: string;
 					is_featured: boolean;
 					language: string;
 					short_description: string;
@@ -18,9 +20,11 @@ export type Database = {
 				Insert: {
 					author: string;
 					description: string;
-					epub_path?: string | null;
+					description_embeddings?: string | null;
+					epub_file_name: string;
 					genres: string[];
 					id?: number;
+					image_file_name: string;
 					is_featured?: boolean;
 					language: string;
 					short_description: string;
@@ -29,9 +33,11 @@ export type Database = {
 				Update: {
 					author?: string;
 					description?: string;
-					epub_path?: string | null;
+					description_embeddings?: string | null;
+					epub_file_name?: string;
 					genres?: string[];
 					id?: number;
+					image_file_name?: string;
 					is_featured?: boolean;
 					language?: string;
 					short_description?: string;
@@ -44,20 +50,34 @@ export type Database = {
 			[_ in never]: never;
 		};
 		Functions: {
-			[_ in never]: never;
+			match_books: {
+				Args: {
+					query_embedding: string;
+					match_threshold: number;
+					match_count: number;
+				};
+				Returns: Database["public"]["CompositeTypes"]["match_books_result"][];
+			};
 		};
 		Enums: {
 			[_ in never]: never;
 		};
 		CompositeTypes: {
-			[_ in never]: never;
+			match_books_result: {
+				id: number | null;
+				title: string | null;
+				short_description: string | null;
+				genres: string[] | null;
+			};
 		};
 	};
 };
 
+type PublicSchema = Database[Extract<keyof Database, "public">];
+
 export type Tables<
 	PublicTableNameOrOptions extends
-		| keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+		| keyof (PublicSchema["Tables"] & PublicSchema["Views"])
 		| { schema: keyof Database },
 	TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
 		? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
@@ -70,10 +90,8 @@ export type Tables<
 		}
 		? R
 		: never
-	: PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-				Database["public"]["Views"])
-		? (Database["public"]["Tables"] &
-				Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+	: PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+		? (PublicSchema["Tables"] & PublicSchema["Views"])[PublicTableNameOrOptions] extends {
 				Row: infer R;
 			}
 			? R
@@ -81,7 +99,7 @@ export type Tables<
 		: never;
 
 export type TablesInsert<
-	PublicTableNameOrOptions extends keyof Database["public"]["Tables"] | { schema: keyof Database },
+	PublicTableNameOrOptions extends keyof PublicSchema["Tables"] | { schema: keyof Database },
 	TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
 		? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
 		: never = never,
@@ -91,8 +109,8 @@ export type TablesInsert<
 		}
 		? I
 		: never
-	: PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-		? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+	: PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+		? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
 				Insert: infer I;
 			}
 			? I
@@ -100,7 +118,7 @@ export type TablesInsert<
 		: never;
 
 export type TablesUpdate<
-	PublicTableNameOrOptions extends keyof Database["public"]["Tables"] | { schema: keyof Database },
+	PublicTableNameOrOptions extends keyof PublicSchema["Tables"] | { schema: keyof Database },
 	TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
 		? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
 		: never = never,
@@ -110,8 +128,8 @@ export type TablesUpdate<
 		}
 		? U
 		: never
-	: PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-		? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+	: PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+		? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
 				Update: infer U;
 			}
 			? U
@@ -119,12 +137,12 @@ export type TablesUpdate<
 		: never;
 
 export type Enums<
-	PublicEnumNameOrOptions extends keyof Database["public"]["Enums"] | { schema: keyof Database },
+	PublicEnumNameOrOptions extends keyof PublicSchema["Enums"] | { schema: keyof Database },
 	EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
 		? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
 		: never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
 	? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-	: PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-		? Database["public"]["Enums"][PublicEnumNameOrOptions]
+	: PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+		? PublicSchema["Enums"][PublicEnumNameOrOptions]
 		: never;

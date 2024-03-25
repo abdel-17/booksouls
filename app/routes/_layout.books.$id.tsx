@@ -1,31 +1,61 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import placholder from "~/assets/placeholder.jpeg";
 import { IconButton } from "~/components/IconButton";
 import { useCarousel } from "~/hooks/carousel";
+import { createServerClient, type ServerClient } from "~/supabase/client.server";
 
-export function loader({ params }: LoaderFunctionArgs) {
-	const id = String(params.id);
-	return {
-		id,
-		title: "Lorem Ipsum",
-		info: "Lorem Ipsum Dolor Sit, Amet Consectetur Elit. Lorem Ipsum Dolor Sit, Amet Consectetur Elit.",
-		description:
-			"Lorem Ipsum Dolor Sit Amet Consectetur Adipisicing Elit. Veniam, Lorem Ipsum Dolor Sit Amet, Consectetur Adipisicing Elit. Magni Animi Corporis Non Distinctio! Quas Aliquam Deleniti Nostrum At Dolor Laudantium Necessitatibus Vitae Sunt Incidunt Vero, Similique Ex Corporis Numquam Officia. Lorem Ipsum Dolor Sit Amet Consectetur Adipisicing Elit. Sed Ullam Error Exercitationem Vitae Odit Nobis Neque Rem. Ea Saepe Reprehenderit Aperiam Est Eveniet Dignissimos Asperiores, Atque Reiciendis Magni Nesciunt Ducimus. Lorem Ipsum Dolor Sit Amet Consectetur Adipisicing Elit. Distinctio Dolor Similique Deleniti Quas Voluptatum Ipsam Pariatur Possimus Ipsa Animi, Aspernatur Tempora Laudantium, Incidunt Esse Debitis? Atque Necessitatibus Perspiciatis Fugit Similique! Lorem Ipsum, Dolor Sit Amet Consectetur Adipisicing Elit. Quibusdam Atque Inventore Nesciunt Maxime, Exercitationem Expedita Eius Error Modi Omnis. Quis Dolorem Vel Autem Aliquid Sed Quo Fuga Mollitia? Repellat, Aliquam. ",
-		genres: ["Genre, Genre, ....."],
-		image: placholder,
-		similarBooks: Array(8)
-			.fill(null)
-			.map(() => ({
-				title: "Book",
-				image: placholder,
-				id: Math.random(),
-			})),
-	};
+export async function loader({ params, request }: LoaderFunctionArgs) {
+	const id = Number(params.id);
+	const headers = new Headers();
+	const supabase = createServerClient(request, headers);
+	const book = await getBook(supabase, id);
+
+	if (book === null) {
+		throw new Response(null, {
+			status: 404,
+			statusText: "Book not found",
+		});
+	}
+	return json(
+		{
+			book,
+			similarBooks: Array(8)
+				.fill(null)
+				.map(() => ({
+					title: "Book",
+					image: placholder,
+					id: Math.random(),
+				})),
+		},
+		{ headers },
+	);
 }
+
+async function getBook(supabase: ServerClient, id: number) {
+	const { data, error } = await supabase
+		.from("books")
+		.select(
+			"id, title, genres, shortDescription:short_description,description,image:image_file_name",
+		)
+		.eq("id", id)
+		.maybeSingle();
+	if (error !== null) {
+		throw error;
+	}
+
+	if (data === null) {
+		return null;
+	}
+
+	const image = supabase.storage.from("books").getPublicUrl(data.image).data.publicUrl;
+
+	return { ...data, image };
+}
+
 export default function Book() {
-	const book = useLoaderData<typeof loader>();
+	const { book, similarBooks } = useLoaderData<typeof loader>();
 	return (
 		<main>
 			<div className="mx-auto max-w-4xl p-9">
@@ -40,7 +70,7 @@ export default function Book() {
 						<p className="mt-2 text-2xl font-medium text-on-background/75">
 							{book.genres.join(", ")}
 						</p>
-						<p className="mt-5 text-xl text-on-background/75 ">{book.info}</p>
+						<p className="mt-5 text-xl text-on-background/75 ">{book.shortDescription}</p>
 						<button className="mx-auto mb-2 mt-auto h-12 rounded-xl bg-gradient-to-r from-primary to-primary-light px-8 text-xl font-medium text-on-primary shadow-inner">
 							Read Book
 						</button>
@@ -51,7 +81,7 @@ export default function Book() {
 					<p className="mt-4 text-on-background/75">{book.description}</p>
 				</section>
 			</div>
-			<SimilarBooks books={book.similarBooks} />
+			<SimilarBooks books={similarBooks} />
 		</main>
 	);
 }
