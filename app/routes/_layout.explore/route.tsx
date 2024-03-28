@@ -58,13 +58,10 @@ function SearchSubmit() {
 			type="submit"
 			tabIndex={-1}
 			aria-disabled={submitting}
+			aria-label={submitting ? "Searching" : "Search"}
 			className="flex h-12 w-12 shrink-0 items-center justify-center bg-primary text-on-primary"
 		>
-			{submitting ? (
-				<Loader2Icon aria-label="Searching..." className="animate-spin" />
-			) : (
-				<Search aria-label="Search" />
-			)}
+			{submitting ? <Loader2Icon className="animate-spin" /> : <Search />}
 		</button>
 	);
 }
